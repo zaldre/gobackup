@@ -1,0 +1,20 @@
+{
+  "test": {
+    "Source": "~/test",
+    "Destination": "./",
+    "Retain": 7,
+    "User": "snowpea",
+    "Verbose": true,
+    "Type": "tar",
+    "ChangeDir": true
+  },
+  "today": {
+    "Source": "~/today",
+    "Destination": "./",
+    "Retain": 30,
+    "User": "root",
+    "Verbose": false,
+    "Type": "tar",
+    "ChangeDir": true
+  }
+}
