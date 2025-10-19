@@ -3,7 +3,6 @@
     "Source": "~/test",
     "Destination": "./",
     "Retain": 7,
-    "User": "snowpea",
     "Verbose": true,
     "Type": "tar",
     "ChangeDir": true
@@ -12,9 +11,15 @@
     "Source": "~/today",
     "Destination": "./",
     "Retain": 30,
-    "User": "root",
     "Verbose": false,
     "Type": "tar",
+    "ChangeDir": true
+  },
+  "taste": {
+    "Source": "snowpea@10.0.0.150:/home/snowpea/today",
+    "Destination": "~/today/",
+    "Verbose": false,
+    "Type": "rsync",
     "ChangeDir": true
   }
 }

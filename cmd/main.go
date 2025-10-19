@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -36,38 +35,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Solution 2: Pretty print as JSON
-	fmt.Print(library)
 	//Begin
 	for _, entry := range entries {
 		fmt.Println("Looking up entry for :::", entry)
+		var cmdString string
+		cmdString = ""
 		backup, exists := library[entry]
 		if !exists {
 			fmt.Printf("Error: No backup found with name '%s'\n", entry)
 			continue
 		}
-		timestamp := time.Now().Format("2006.01.02_15.04.05")
-		var builder strings.Builder
+		// Set the name from the map key
+		backup.Name = entry
 
+		//Build the command
 		if backup.Type == "tar" {
-			builder.WriteString("tar -cz")
-			if backup.Verbose == true {
-				builder.WriteString("v")
-			}
-			builder.WriteString("f")
-			builder.WriteString(" ")
-			builder.WriteString(backup.Destination)
-			builder.WriteString(entry + "_" + timestamp)
-			builder.WriteString(".tar.gz ")
-			if backup.ChangeDir == true {
-				builder.WriteString("-C")
-			}
-			builder.WriteString(" ")
-			builder.WriteString(backup.Source)
-			builder.WriteString(" .")
+			cmdString = tar(backup)
 		}
-		cmdString := builder.String()
+
+		if backup.Type == "rsync" {
+			cmdString = rsync(backup)
+		}
+		//Debug
 		fmt.Print(cmdString)
+
+		//Run
 		cmd := exec.Command("sh", "-c", cmdString)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
