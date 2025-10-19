@@ -2,7 +2,7 @@
   "test": {
     "Source": "~/test",
     "Destination": "./",
-    "Retain": 7,
+    "Retain": 3,
     "Verbose": true,
     "Type": "tar",
     "ChangeDir": true

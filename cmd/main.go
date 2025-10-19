@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -67,6 +69,27 @@ func main() {
 			return
 		}
 		fmt.Println(string(output))
+
+		if backup.Type == "tar" {
+			pattern := backup.Destination + backup.Name + "_*.tar.gz"
+			files, err := filepath.Glob(pattern)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(files)
+			if len(files) > backup.Retain {
+				numFilesRemove := len(files) - backup.Retain
+
+				fmt.Println("Current number of backups exceeds retention threshold")
+				fmt.Println("Total of " + strconv.Itoa(numFilesRemove) + " files to remove")
+
+				for i := 0; i < numFilesRemove; i++ {
+					fmt.Println("File to remove " + files[i])
+					os.Remove(files[i])
+				}
+			}
+		}
 	}
 }
 
