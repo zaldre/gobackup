@@ -10,7 +10,7 @@
   "today": {
     "Source": "~/today",
     "Destination": "./",
-    "Retain": 30,
+    "Retain": 3,
     "Verbose": false,
     "Type": "tar",
     "ChangeDir": true

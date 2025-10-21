@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -29,7 +26,7 @@ func main() {
 		fmt.Printf("Unable to find library.json, does this actually exist? %v\n", err)
 		os.Exit(1)
 	}
-
+	//Load invidual backup
 	var library map[string]Backup
 	err = json.Unmarshal(JSON, &library)
 	if err != nil {
@@ -40,8 +37,7 @@ func main() {
 	//Begin
 	for _, entry := range entries {
 		fmt.Println("Looking up entry for :::", entry)
-		var cmdString string
-		cmdString = ""
+
 		backup, exists := library[entry]
 		if !exists {
 			fmt.Printf("Error: No backup found with name '%s'\n", entry)
@@ -50,44 +46,18 @@ func main() {
 		// Set the name from the map key
 		backup.Name = entry
 
-		//Build the command
+		//Build and run the command
 		if backup.Type == "tar" {
-			cmdString = tar(backup)
+			if err := tar(&backup); err != nil {
+				fmt.Printf("tar backup failed for '%s': %v\n", entry, err)
+				continue
+			}
 		}
 
 		if backup.Type == "rsync" {
-			cmdString = rsync(backup)
-		}
-		//Debug
-		fmt.Print(cmdString)
-
-		//Run
-		cmd := exec.Command("sh", "-c", cmdString)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		fmt.Println(string(output))
-
-		if backup.Type == "tar" {
-			pattern := backup.Destination + backup.Name + "_*.tar.gz"
-			files, err := filepath.Glob(pattern)
-			if err != nil {
-				fmt.Println(err)
+			if err := rsync(&backup); err != nil {
+				fmt.Printf("rsync backup failed for '%s': %v\n", entry, err)
 				continue
-			}
-			fmt.Println(files)
-			if len(files) > backup.Retain {
-				numFilesRemove := len(files) - backup.Retain
-
-				fmt.Println("Current number of backups exceeds retention threshold")
-				fmt.Println("Total of " + strconv.Itoa(numFilesRemove) + " files to remove")
-
-				for i := 0; i < numFilesRemove; i++ {
-					fmt.Println("File to remove " + files[i])
-					os.Remove(files[i])
-				}
 			}
 		}
 	}

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"os/exec"
 	"strings"
 )
 
-func rsync(backup Backup) string {
+func rsync(backup *Backup) error {
 	var builder strings.Builder
 	builder.WriteString("rsync ")
 	builder.WriteString("-rahz")
@@ -17,5 +19,13 @@ func rsync(backup Backup) string {
 	builder.WriteString(" ")
 	builder.WriteString(backup.Destination)
 	cmdString := builder.String()
-	return cmdString
+	//Run the command
+	cmd := exec.Command("sh", "-c", cmdString)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+	fmt.Println(string(output))
+	return nil
 }
