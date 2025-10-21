@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	//Setup logic, cmdline args
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: backup nameoflibrary")
 		os.Exit(1)
@@ -19,16 +20,20 @@ func main() {
 	} else {
 		entries = []string{os.Args[1]}
 	}
-
+	LibraryFile := "library.json"
+	if len(os.Args) > 3 {
+		LibraryFile = os.Args[2]
+	}
 	//Load from JSON file
-	JSON, err := os.ReadFile("library.json")
+	jsonData, err := os.ReadFile(LibraryFile)
 	if err != nil {
 		fmt.Printf("Unable to find library.json, does this actually exist? %v\n", err)
 		os.Exit(1)
 	}
-	//Load invidual backup
+
+	//Load individual backup
 	var library map[string]Backup
-	err = json.Unmarshal(JSON, &library)
+	err = json.Unmarshal(jsonData, &library)
 	if err != nil {
 		fmt.Printf("Unable to load json file into memory, likely incorrect formatting: %v\n", err)
 		os.Exit(1)
@@ -36,7 +41,7 @@ func main() {
 
 	//Begin
 	for _, entry := range entries {
-		fmt.Println("Looking up entry for :::", entry)
+		fmt.Println("Looking up entry for -->", entry)
 
 		backup, exists := library[entry]
 		if !exists {
@@ -46,15 +51,14 @@ func main() {
 		// Set the name from the map key
 		backup.Name = entry
 
-		//Build and run the command
-		if backup.Type == "tar" {
+		switch backup.Type {
+		case "tar":
 			if err := tar(&backup); err != nil {
 				fmt.Printf("tar backup failed for '%s': %v\n", entry, err)
 				continue
 			}
-		}
 
-		if backup.Type == "rsync" {
+		case "rsync":
 			if err := rsync(&backup); err != nil {
 				fmt.Printf("rsync backup failed for '%s': %v\n", entry, err)
 				continue
@@ -64,12 +68,12 @@ func main() {
 }
 
 type Backup struct {
-	Name        string
-	Source      string
-	Destination string
-	Retain      int
-	User        string
-	Verbose     bool
-	Type        string
-	ChangeDir   bool
+	Name        string `json:"Name"`
+	Source      string `json:"Source"`
+	Destination string `json:"Destination"`
+	Retain      int    `json:"Retain"`
+	User        string `json:"User"`
+	Verbose     bool   `json:"Verbose"`
+	Type        string `json:"Type"`
+	ChangeDir   bool   `json:"ChangeDir"`
 }

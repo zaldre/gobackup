@@ -3,28 +3,24 @@ package main
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 )
 
 func rsync(backup *Backup) error {
-	var builder strings.Builder
-	builder.WriteString("rsync ")
-	builder.WriteString("-rahz")
-	if backup.Verbose == true {
-		builder.WriteString("v")
+	verboseFlag := ""
+	if backup.Verbose {
+		verboseFlag = "v"
 	}
-	builder.WriteString(" ")
-	builder.WriteString("--delete ")
-	builder.WriteString(backup.Source)
-	builder.WriteString(" ")
-	builder.WriteString(backup.Destination)
-	cmdString := builder.String()
+
+	cmdString := fmt.Sprintf("rsync -rahz%s --delete %s %s",
+		verboseFlag,
+		backup.Source,
+		backup.Destination,
+	)
 	//Run the command
 	cmd := exec.Command("sh", "-c", cmdString)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return err
+		return fmt.Errorf("rsync command failed: %w", err)
 	}
 	fmt.Println(string(output))
 	return nil

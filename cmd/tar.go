@@ -5,41 +5,36 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
 
 func tar(backup *Backup) error {
-	//Debug: Print backup values and memory address
-	fmt.Printf("DEBUG tar: backup=%+v, address=%p\n", *backup, backup)
-
 	//Build the command
-	var builder strings.Builder
 	timestamp := time.Now().Format("2006.01.02_15.04.05")
-	builder.WriteString("tar -cz")
-	if backup.Verbose == true {
-		builder.WriteString("v")
+	verboseFlag := ""
+	if backup.Verbose {
+		verboseFlag = "v"
 	}
-	builder.WriteString("f")
-	builder.WriteString(" ")
-	builder.WriteString(backup.Destination)
-	builder.WriteString(backup.Name + "_" + timestamp)
-	builder.WriteString(".tar.gz ")
+	changeDirFlag := ""
 	if backup.ChangeDir == true {
-		builder.WriteString("-C")
+		changeDirFlag = "-C "
+		fmt.Println("Changing directory to: ", backup.Source)
 	}
-	builder.WriteString(" ")
-	builder.WriteString(backup.Source)
-	builder.WriteString(" .")
-	cmdString := builder.String()
+
+	cmdString := fmt.Sprintf("tar -cz%sf %s%s_%s.tar.gz %s%s .",
+		verboseFlag,
+		backup.Destination,
+		backup.Name,
+		timestamp,
+		changeDirFlag,
+		backup.Source,
+	)
 
 	//Run the command
 	cmd := exec.Command("sh", "-c", cmdString)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return err
+		return fmt.Errorf("tar command failed: %w", err)
 	}
 	fmt.Println(string(output))
 
@@ -47,19 +42,17 @@ func tar(backup *Backup) error {
 	pattern := backup.Destination + backup.Name + "_*.tar.gz"
 	files, err := filepath.Glob(pattern)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return fmt.Errorf("failed to glob backup files: %w", err)
 	}
-	fmt.Println(files)
+
 	if len(files) > backup.Retain {
-		numFilesRemove := len(files) - backup.Retain
+		filesToRemove := files[:len(files)-backup.Retain]
+		fmt.Printf("Removing %d old backup files (retention: %d)\n", len(filesToRemove), backup.Retain)
 
-		fmt.Println("Current number of backups exceeds retention threshold")
-		fmt.Println("Total of " + strconv.Itoa(numFilesRemove) + " files to remove")
-
-		for i := 0; i < numFilesRemove; i++ {
-			fmt.Println("File to remove " + files[i])
-			os.Remove(files[i])
+		for _, file := range filesToRemove {
+			if err := os.Remove(file); err != nil {
+				fmt.Printf("Warning: failed to remove %s: %v\n", file, err)
+			}
 		}
 	}
 	return nil
