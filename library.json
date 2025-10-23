@@ -15,9 +15,10 @@
     "Type": "tar",
     "ChangeDir": true
   },
-  "taste": {
-    "Source": "snowpea@10.0.0.150:/home/snowpea/today",
-    "Destination": "~/today/",
+  "torado": {
+    "Source": "snowpea@10.0.0.173:/home/snowpea/torado",
+    "Destination": "./",
+    "Retain": 3,
     "Verbose": false,
     "Type": "rsync",
     "ChangeDir": true

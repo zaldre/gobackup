@@ -31,12 +31,14 @@ func tar(backup *Backup) error {
 	)
 
 	//Run the command
+	fmt.Println("Beginning tar")
 	cmd := exec.Command("sh", "-c", cmdString)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("tar command failed: %w", err)
 	}
 	fmt.Println(string(output))
+	fmt.Println("Tar completed")
 
 	//Cleanup old backups
 	pattern := backup.Destination + backup.Name + "_*.tar.gz"

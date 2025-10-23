@@ -6,6 +6,9 @@ import (
 )
 
 func rsync(backup *Backup) error {
+	//Check if scratch dir is defined
+	var scratch string = getEnv("SCRATCH", "/tmp/")
+	scratchDir := scratch + "/" + backup.Name
 	verboseFlag := ""
 	if backup.Verbose {
 		verboseFlag = "v"
@@ -14,7 +17,7 @@ func rsync(backup *Backup) error {
 	cmdString := fmt.Sprintf("rsync -rahz%s --delete %s %s",
 		verboseFlag,
 		backup.Source,
-		backup.Destination,
+		scratchDir,
 	)
 	//Run the command
 	cmd := exec.Command("sh", "-c", cmdString)
@@ -23,5 +26,10 @@ func rsync(backup *Backup) error {
 		return fmt.Errorf("rsync command failed: %w", err)
 	}
 	fmt.Println(string(output))
+
+	//Now the rsync is completed, we tar the resultant dir
+	fmt.Println("Rsync completed, beginning tar")
+	backup.Source = scratchDir
+	tar(backup)
 	return nil
 }

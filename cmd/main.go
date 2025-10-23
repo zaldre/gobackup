@@ -24,6 +24,7 @@ func main() {
 	if len(os.Args) > 3 {
 		LibraryFile = os.Args[2]
 	}
+
 	//Load from JSON file
 	jsonData, err := os.ReadFile(LibraryFile)
 	if err != nil {
@@ -65,6 +66,14 @@ func main() {
 			}
 		}
 	}
+}
+
+func getEnv(key string, defvalue string) string {
+	value := os.Getenv(key)
+	if value != "" {
+		return value
+	}
+	return defvalue
 }
 
 type Backup struct {
