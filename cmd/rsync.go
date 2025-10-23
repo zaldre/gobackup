@@ -14,12 +14,13 @@ func rsync(backup *Backup) error {
 		verboseFlag = "v"
 	}
 
-	cmdString := fmt.Sprintf("rsync -rahz%s --delete %s %s",
+	cmdString := fmt.Sprintf("rsync -rahz%s --delete -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR' %s %s",
 		verboseFlag,
 		backup.Source,
 		scratchDir,
 	)
 	//Run the command
+	fmt.Println("Beginning rsync using command " + cmdString)
 	cmd := exec.Command("sh", "-c", cmdString)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
