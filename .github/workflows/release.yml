@@ -65,6 +65,7 @@ jobs:
           gh release create v${{ steps.version.outputs.version }} \
             --title "Release v${{ steps.version.outputs.version }}" \
             --generate-notes
+          sleep 5
       
       - name: Upload assets
         if: steps.check_tag.outputs.exists == 'false'
