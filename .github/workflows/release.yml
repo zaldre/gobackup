@@ -1,0 +1,71 @@
+name: Release on CI Pass
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Run tests
+        run: go test ./...
+      
+      - name: Build
+        run: go build -v ./cmd
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep 'const VERSION' cmd/main.go | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.version.outputs.version }}$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install UPX
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx-ucl
+      
+      - name: Build binaries
+        if: steps.check_tag.outputs.exists == 'false'
+        run: chmod +x build.sh && ./build.sh
+      
+      - name: Create release
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v${{ steps.version.outputs.version }} \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            bin/*/*/gobackup-*
