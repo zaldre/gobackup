@@ -65,10 +65,10 @@ jobs:
           gh release create v${{ steps.version.outputs.version }} \
             --title "Release v${{ steps.version.outputs.version }}" \
             --generate-notes
-          sleep 5
-          - name: Prepare release assets
-          if: steps.check_tag.outputs.exists == 'false'
-          run: |
+
+      - name: Prepare release assets
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
             mkdir -p release
             VERSION=${{ steps.version.outputs.version }}
             
@@ -76,7 +76,7 @@ jobs:
             cp bin/linux/amd64/gobackup-v${VERSION} release/gobackup-v${VERSION}-linux-amd64
             cp bin/darwin/arm64/gobackup-v${VERSION} release/gobackup-v${VERSION}-darwin-arm64
             cp bin/darwin/amd64/gobackup-v${VERSION} release/gobackup-v${VERSION}-darwin-amd64
-           
+            
       - name: Create release
         if: steps.check_tag.outputs.exists == 'false'
         env:
