@@ -66,10 +66,23 @@ jobs:
             --title "Release v${{ steps.version.outputs.version }}" \
             --generate-notes
           sleep 5
-      
-      - name: Upload assets
+          - name: Prepare release assets
+          if: steps.check_tag.outputs.exists == 'false'
+          run: |
+            mkdir -p release
+            VERSION=${{ steps.version.outputs.version }}
+            
+            # Rename binaries with platform/arch info
+            cp bin/linux/amd64/gobackup-v${VERSION} release/gobackup-v${VERSION}-linux-amd64
+            cp bin/darwin/arm64/gobackup-v${VERSION} release/gobackup-v${VERSION}-darwin-arm64
+            cp bin/darwin/amd64/gobackup-v${VERSION} release/gobackup-v${VERSION}-darwin-amd64
+           
+      - name: Create release
         if: steps.check_tag.outputs.exists == 'false'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v${{ steps.version.outputs.version }} bin/*/*/gobackup-*
+            gh release create v${{ steps.version.outputs.version }} \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            release/*
