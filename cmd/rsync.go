@@ -7,7 +7,7 @@ import (
 
 func rsync(backup *Backup) error {
 	//Check if scratch dir is defined
-	var scratch string = getEnv("SCRATCH", "/tmp/")
+	var scratch string = GetEnv("SCRATCH", "/tmp/")
 	scratchDir := scratch + "/" + backup.Name
 	verboseFlag := ""
 	if backup.Verbose {
