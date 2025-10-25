@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -10,8 +11,7 @@ import (
 func main() {
 	//Setup logic, cmdline args
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: backup nameoflibrary")
-		os.Exit(1)
+		log.Fatal("Usage: backup nameoflibrary")
 	}
 	var entries []string
 	if strings.Contains(os.Args[1], ",") {
@@ -28,16 +28,14 @@ func main() {
 	//Load from JSON file
 	jsonData, err := os.ReadFile(LibraryFile)
 	if err != nil {
-		fmt.Printf("Unable to find library.json, does this actually exist? %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find library.json, does this actually exist? %v\n", err)
 	}
 
 	//Load individual backup
 	var library map[string]Backup
 	err = json.Unmarshal(jsonData, &library)
 	if err != nil {
-		fmt.Printf("Unable to load json file into memory, likely incorrect formatting: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to load json file into memory, likely incorrect formatting: %v\n", err)
 	}
 
 	//Begin
