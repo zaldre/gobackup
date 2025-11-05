@@ -32,10 +32,48 @@ func tar(backup *Backup) error {
 
 	//Run the command
 	fmt.Println("Beginning tar")
+	fmt.Printf("Executing command: %s\n", cmdString)
+	
+	// Validate paths before running
+	if backup.ChangeDir {
+		if _, err := os.Stat(backup.Source); os.IsNotExist(err) {
+			return fmt.Errorf("source directory does not exist: %s", backup.Source)
+		}
+	}
+	
+	// Check if destination directory exists and is writable
+	destInfo, err := os.Stat(backup.Destination)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("destination directory does not exist: %s", backup.Destination)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check destination directory: %w", err)
+	}
+	if !destInfo.IsDir() {
+		return fmt.Errorf("destination path is not a directory: %s", backup.Destination)
+	}
+	// Check if destination is writable
+	if destInfo.Mode().Perm()&0200 == 0 {
+		return fmt.Errorf("destination directory is not writable: %s", backup.Destination)
+	}
+	
 	cmd := exec.Command("sh", "-c", cmdString)
 	output, err := cmd.CombinedOutput()
+	
 	if err != nil {
-		return fmt.Errorf("tar command failed: %w", err)
+		// Try to get exit code if available
+		exitCode := "unknown"
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = fmt.Sprintf("%d", exitError.ExitCode())
+		}
+		
+		outputStr := string(output)
+		if outputStr != "" {
+			fmt.Printf("Tar command output/stderr:\n%s\n", outputStr)
+		}
+		
+		return fmt.Errorf("tar command failed with exit code %s: %w\nCommand: %s\nOutput: %s", 
+			exitCode, err, cmdString, outputStr)
 	}
 	fmt.Println(string(output))
 	fmt.Println("Tar completed")
