@@ -16,7 +16,8 @@ func main() {
 	if len(os.Args) > 3 {
 		LibraryFile = os.Args[2]
 	}
-
 	//Begin Logic call
-	Logic(LibraryFile)
+	if err := Logic(LibraryFile); err != nil {
+		log.Fatal(err)
+	}
 }

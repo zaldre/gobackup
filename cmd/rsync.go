@@ -31,6 +31,8 @@ func rsync(backup *Backup) error {
 	//Now the rsync is completed, we tar the resultant dir
 	fmt.Println("Rsync completed, beginning tar")
 	backup.Source = scratchDir
-	tar(backup)
+	if err := tar(backup); err != nil {
+		return fmt.Errorf("tar after rsync failed: %w", err)
+	}
 	return nil
 }
