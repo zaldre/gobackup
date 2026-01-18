@@ -3,7 +3,15 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 )
+
+// shellQuote properly quotes a string for use in shell commands
+func shellQuote(s string) string {
+	// Replace single quotes with '\'' (close quote, escaped quote, open quote)
+	quoted := strings.ReplaceAll(s, "'", "'\\''")
+	return "'" + quoted + "'"
+}
 
 func rsync(backup *Backup) error {
 	//Check if scratch dir is defined
@@ -14,17 +22,8 @@ func rsync(backup *Backup) error {
 		verboseFlag = "v"
 	}
 
-	// Build exclude flags
-	excludeFlags := ""
-	if len(backup.Excludes) > 0 {
-		for _, exclude := range backup.Excludes {
-			excludeFlags += fmt.Sprintf(" --exclude=%s", shellQuote(exclude))
-		}
-	}
-
-	cmdString := fmt.Sprintf("rsync -rahz%s%s --delete -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR' %s %s",
+	cmdString := fmt.Sprintf("rsync -rahz%s --delete -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR' %s %s",
 		verboseFlag,
-		excludeFlags,
 		shellQuote(backup.Source),
 		shellQuote(scratchDir),
 	)

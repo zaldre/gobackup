@@ -22,18 +22,8 @@ func tar(backup *Backup) error {
 		fmt.Println("Changing directory to: ", backup.Source)
 	}
 
-	// Build exclude flags
-	excludeFlags := ""
-	if len(backup.Excludes) > 0 {
-		for _, exclude := range backup.Excludes {
-			// Properly quote the exclude pattern to handle special characters
-			excludeFlags += fmt.Sprintf(" --exclude=%s", shellQuote(exclude))
-		}
-	}
-
-	cmdString := fmt.Sprintf("tar -cz%sf%s %s%s_%s.tar.gz %s%s .",
+	cmdString := fmt.Sprintf("tar -cz%sf %s%s_%s.tar.gz %s%s .",
 		verboseFlag,
-		excludeFlags,
 		backup.Destination,
 		backup.Name,
 		timestamp,

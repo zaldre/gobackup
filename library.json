@@ -5,8 +5,7 @@
     "Retain": 3,
     "Verbose": true,
     "Type": "tar",
-    "ChangeDir": true,
-    "Excludes": ["*.tmp", "node_modules/", ".git/"]
+    "ChangeDir": true
   },
   "today": {
     "Source": "~/today",
@@ -22,7 +21,6 @@
     "Retain": 3,
     "Verbose": false,
     "Type": "rsync",
-    "ChangeDir": true,
-    "Excludes": ["*.log", "cache/", "tmp/"]
+    "ChangeDir": true
   }
 }
