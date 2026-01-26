@@ -22,11 +22,51 @@ func tar(backup *Backup) error {
 		fmt.Println("Changing directory to: ", backup.Source)
 	}
 
-	cmdString := fmt.Sprintf("tar -cz%sf %s%s_%s.tar.gz %s%s .",
-		verboseFlag,
+	// Determine compression type and tar flags
+	compressionType := backup.CompressionType
+	if compressionType == "" {
+		compressionType = "gzip" // default to gzip
+	}
+
+	var tarFlags string
+	var fileExtension string
+	switch compressionType {
+	case "gzip":
+		tarFlags = fmt.Sprintf("-c%sf", verboseFlag)
+		fileExtension = "tar.gz"
+	case "bzip2":
+		tarFlags = fmt.Sprintf("-cj%sf", verboseFlag)
+		fileExtension = "tar.bz2"
+	case "xz":
+		tarFlags = fmt.Sprintf("-cJ%sf", verboseFlag)
+		fileExtension = "tar.xz"
+	case "zstd":
+		if verboseFlag != "" {
+			tarFlags = fmt.Sprintf("--zstd -c%sf", verboseFlag)
+		} else {
+			tarFlags = "--zstd -cf"
+		}
+		fileExtension = "tar.zst"
+	default:
+		return fmt.Errorf("invalid compression type: %s (supported: gzip, bzip2, xz, zstd)", compressionType)
+	}
+
+	// Build exclude flags
+	excludeFlags := ""
+	if len(backup.Excludes) > 0 {
+		for _, exclude := range backup.Excludes {
+			// Properly quote the exclude pattern for shell safety
+			excludeFlags += fmt.Sprintf(" --exclude=%s", shellQuote(exclude))
+		}
+	}
+
+	cmdString := fmt.Sprintf("tar%s %s %s%s_%s.%s %s%s .",
+		excludeFlags,
+		tarFlags,
 		backup.Destination,
 		backup.Name,
 		timestamp,
+		fileExtension,
 		changeDirFlag,
 		backup.Source,
 	)
@@ -91,7 +131,25 @@ func tar(backup *Backup) error {
 	}
 
 	//Cleanup old backups
-	pattern := backup.Destination + backup.Name + "_*.tar.gz"
+	// Determine file extension for cleanup pattern
+	compressionTypeForCleanup := backup.CompressionType
+	if compressionTypeForCleanup == "" {
+		compressionTypeForCleanup = "gzip"
+	}
+	var cleanupExtension string
+	switch compressionTypeForCleanup {
+	case "gzip":
+		cleanupExtension = "tar.gz"
+	case "bzip2":
+		cleanupExtension = "tar.bz2"
+	case "xz":
+		cleanupExtension = "tar.xz"
+	case "zstd":
+		cleanupExtension = "tar.zst"
+	default:
+		cleanupExtension = "tar.gz"
+	}
+	pattern := backup.Destination + backup.Name + "_*." + cleanupExtension
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("failed to glob backup files: %w", err)

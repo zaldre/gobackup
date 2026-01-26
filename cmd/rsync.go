@@ -22,7 +22,17 @@ func rsync(backup *Backup) error {
 		verboseFlag = "v"
 	}
 
-	cmdString := fmt.Sprintf("rsync -rahz%s --delete -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR' %s %s",
+	// Build exclude flags
+	excludeFlags := ""
+	if len(backup.Excludes) > 0 {
+		for _, exclude := range backup.Excludes {
+			// Properly quote the exclude pattern for shell safety
+			excludeFlags += fmt.Sprintf(" --exclude=%s", shellQuote(exclude))
+		}
+	}
+	
+	cmdString := fmt.Sprintf("rsync%s -rahz%s --delete -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR' %s %s",
+		excludeFlags,
 		verboseFlag,
 		shellQuote(backup.Source),
 		shellQuote(scratchDir),
