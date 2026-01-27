@@ -60,19 +60,41 @@ func tar(backup *Backup) error {
 		}
 	}
 
-	cmdString := fmt.Sprintf("tar%s %s %s%s_%s.%s %s%s .",
+	// Create temporary file for the backup to avoid partial files in destination
+	var scratch string = GetEnv("SCRATCH", "/tmp")
+	tempFile, err := os.CreateTemp(scratch, fmt.Sprintf("gobackup_%s_%s_*.%s", backup.Name, timestamp, fileExtension))
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	tempFilePath := tempFile.Name()
+	tempFile.Close() // Close immediately, tar will write to it via command
+
+	// Track if we need to clean up temp file
+	cleanupTemp := true
+	defer func() {
+		if cleanupTemp {
+			// Only remove temp file if it still exists (move might have succeeded)
+			if _, err := os.Stat(tempFilePath); err == nil {
+				os.Remove(tempFilePath)
+			}
+		}
+	}()
+
+	// Final destination path
+	finalPath := filepath.Join(backup.Destination, fmt.Sprintf("%s_%s.%s", backup.Name, timestamp, fileExtension))
+
+	// Build command to write to temp file first
+	cmdString := fmt.Sprintf("tar%s %s %s %s%s .",
 		excludeFlags,
 		tarFlags,
-		backup.Destination,
-		backup.Name,
-		timestamp,
-		fileExtension,
+		shellQuote(tempFilePath),
 		changeDirFlag,
 		backup.Source,
 	)
 
 	//Run the command
 	fmt.Println("Beginning tar")
+	fmt.Printf("Writing to temporary file: %s\n", tempFilePath)
 	fmt.Printf("Executing command: %s\n", cmdString)
 
 	// Validate paths before running
@@ -115,9 +137,9 @@ func tar(backup *Backup) error {
 		if exitCode == "1" && containsOnlyFileChangedWarnings(outputStr) {
 			fmt.Printf("Tar warnings (files changed during backup - this is normal for live systems):\n%s\n", outputStr)
 			fmt.Println("Tar completed with warnings (backup is valid)")
-			// Continue to cleanup - don't return error
+			// Continue to move file - don't return error
 		} else {
-			// This is a real error
+			// This is a real error - return (defer will clean up temp file)
 			if outputStr != "" {
 				fmt.Printf("Tar command output/stderr:\n%s\n", outputStr)
 			}
@@ -129,6 +151,14 @@ func tar(backup *Backup) error {
 		fmt.Println(string(output))
 		fmt.Println("Tar completed")
 	}
+
+	// Move temp file to final destination (atomic operation)
+	fmt.Printf("Moving backup from temporary location to: %s\n", finalPath)
+	if err := os.Rename(tempFilePath, finalPath); err != nil {
+		return fmt.Errorf("failed to move backup to destination: %w", err)
+	}
+	cleanupTemp = false // Don't clean up - file was successfully moved
+	fmt.Printf("Backup successfully moved to: %s\n", finalPath)
 
 	//Cleanup old backups
 	// Determine file extension for cleanup pattern
@@ -149,7 +179,7 @@ func tar(backup *Backup) error {
 	default:
 		cleanupExtension = "tar.gz"
 	}
-	pattern := backup.Destination + backup.Name + "_*." + cleanupExtension
+	pattern := filepath.Join(backup.Destination, backup.Name+"_*."+cleanupExtension)
 	files, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("failed to glob backup files: %w", err)
