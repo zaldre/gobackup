@@ -88,7 +88,42 @@ func TestBackupStructWithJSON(t *testing.T) {
 		ChangeDir:   true,
 	}
 
-	if backup != expected {
-		t.Errorf("Backup = %+v, want %+v", backup, expected)
+	// Compare fields individually since struct contains slices (cannot use !=)
+	if backup.Name != expected.Name {
+		t.Errorf("Name = %v, want %v", backup.Name, expected.Name)
+	}
+	if backup.Source != expected.Source {
+		t.Errorf("Source = %v, want %v", backup.Source, expected.Source)
+	}
+	if backup.Destination != expected.Destination {
+		t.Errorf("Destination = %v, want %v", backup.Destination, expected.Destination)
+	}
+	if backup.Retain != expected.Retain {
+		t.Errorf("Retain = %v, want %v", backup.Retain, expected.Retain)
+	}
+	if backup.User != expected.User {
+		t.Errorf("User = %v, want %v", backup.User, expected.User)
+	}
+	if backup.Verbose != expected.Verbose {
+		t.Errorf("Verbose = %v, want %v", backup.Verbose, expected.Verbose)
+	}
+	if backup.Type != expected.Type {
+		t.Errorf("Type = %v, want %v", backup.Type, expected.Type)
+	}
+	if backup.ChangeDir != expected.ChangeDir {
+		t.Errorf("ChangeDir = %v, want %v", backup.ChangeDir, expected.ChangeDir)
+	}
+	if backup.CompressionType != expected.CompressionType {
+		t.Errorf("CompressionType = %v, want %v", backup.CompressionType, expected.CompressionType)
+	}
+	// Compare Excludes slice
+	if len(backup.Excludes) != len(expected.Excludes) {
+		t.Errorf("Excludes length = %v, want %v", len(backup.Excludes), len(expected.Excludes))
+	} else {
+		for i, v := range backup.Excludes {
+			if v != expected.Excludes[i] {
+				t.Errorf("Excludes[%d] = %v, want %v", i, v, expected.Excludes[i])
+			}
+		}
 	}
 }

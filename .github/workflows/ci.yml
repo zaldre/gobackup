@@ -20,10 +20,12 @@ jobs:
         
     - name: Cache Go modules
       uses: actions/cache@v3
+      continue-on-error: true
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
+          ${{ runner.os }}-go-${{ hashFiles('**/go.mod') }}
           ${{ runner.os }}-go-
     
     - name: Install dependencies
