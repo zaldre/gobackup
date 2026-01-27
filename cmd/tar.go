@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -152,13 +154,40 @@ func tar(backup *Backup) error {
 		fmt.Println("Tar completed")
 	}
 
-	// Move temp file to final destination (atomic operation)
+	// Move temp file to final destination (atomic operation on same filesystem)
 	fmt.Printf("Moving backup from temporary location to: %s\n", finalPath)
 	if err := os.Rename(tempFilePath, finalPath); err != nil {
-		return fmt.Errorf("failed to move backup to destination: %w", err)
+		// If rename fails due to cross-device link, fall back to copy
+		// Check for EXDEV error (invalid cross-device link)
+		isCrossDevice := false
+		if linkErr, ok := err.(*os.LinkError); ok {
+			if errno, ok := linkErr.Err.(syscall.Errno); ok && errno == syscall.EXDEV {
+				isCrossDevice = true
+			}
+		}
+		// Also check error message as fallback (for different error types)
+		if !isCrossDevice && strings.Contains(err.Error(), "invalid cross-device link") {
+			isCrossDevice = true
+		}
+
+		if isCrossDevice {
+			fmt.Printf("Cross-device move detected, copying file instead...\n")
+			if err := copyFile(tempFilePath, finalPath); err != nil {
+				return fmt.Errorf("failed to copy backup to destination: %w", err)
+			}
+			// Remove temp file after successful copy
+			if err := os.Remove(tempFilePath); err != nil {
+				fmt.Printf("Warning: failed to remove temporary file %s: %v\n", tempFilePath, err)
+			}
+			cleanupTemp = false // Don't clean up in defer - already removed
+			fmt.Printf("Backup successfully copied to: %s\n", finalPath)
+		} else {
+			return fmt.Errorf("failed to move backup to destination: %w", err)
+		}
+	} else {
+		cleanupTemp = false // Don't clean up - file was successfully moved
+		fmt.Printf("Backup successfully moved to: %s\n", finalPath)
 	}
-	cleanupTemp = false // Don't clean up - file was successfully moved
-	fmt.Printf("Backup successfully moved to: %s\n", finalPath)
 
 	//Cleanup old backups
 	// Determine file extension for cleanup pattern
@@ -218,4 +247,40 @@ func containsOnlyFileChangedWarnings(output string) bool {
 		}
 	}
 	return true
+}
+
+// copyFile copies a file from src to dst, preserving permissions
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	// Get source file info for permissions
+	sourceInfo, err := sourceFile.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat source file: %w", err)
+	}
+
+	// Create destination file with same permissions
+	destFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, sourceInfo.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy the file contents
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("failed to copy file contents: %w", err)
+	}
+
+	// Preserve timestamps
+	if err := os.Chtimes(dst, sourceInfo.ModTime(), sourceInfo.ModTime()); err != nil {
+		// Non-fatal, just log a warning
+		fmt.Printf("Warning: failed to preserve timestamps: %v\n", err)
+	}
+
+	return nil
 }
